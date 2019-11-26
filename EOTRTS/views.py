@@ -1,11 +1,12 @@
-from django.contrib.auth.models import User, Group
 from django.http import HttpResponse, JsonResponse
 from rest_framework import status, viewsets
-from EOTRTS.serializers import UserSerializer, GroupSerializer, StudentInformationSerializer
+from rest_framework.parsers import FileUploadParser
+from rest_framework.views import APIView
+
+from EOTRTS.serializers import *
+from EOTRTS_web.settings import BASE_DIR
 from .models import StudentData
-from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 
 
@@ -25,36 +26,27 @@ class GroupViewSet(viewsets.ModelViewSet):
     serializer_class = GroupSerializer
 
 
-@csrf_exempt
-class StudentInformationViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    API endpoint that allows groups to be viewed or edited.
-    """
-    queryset = StudentData.objects.all()
-
-    @action(detail=False)
-    def get_student_information(self, request, student_id=None):
-
-        try:
-            data = StudentData.objects.get(student_id=student_id)
-        except StudentData.DoesNotExist:
-            return HttpResponse(status=404)
-
-        if request.method == 'GET':
-            serializer = StudentInformationSerializer(data)
-            return JsonResponse(serializer.data)
-
-
 def student_information(request, student_id):
     try:
         if request.method == 'GET':
             student_inform = get_object_or_404(StudentData, student_id=student_id)
             serializer = StudentInformationSerializer(student_inform)
-            return JsonResponse(serializer.data)
 
+            return JsonResponse(serializer.data)
         else:
-            serializer = ""
+            pass
     except StudentData.DoesNotExist:
         return HttpResponse(status=404)
 
 
+class FileUploadView(APIView):
+    parser_class = (FileUploadParser,)
+
+    def post(self, request, *args, **kwargs):
+        file_serializer = FileSerializer(data=request.data)
+        if file_serializer.is_valid():
+            request.FILES.get('filename')
+            file_serializer.save()
+            return Response(file_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -8,6 +8,50 @@
 from django.db import models
 
 
+class EOTRTSRouter:
+    """
+    A router to control all database operations on models in the
+    user application.
+    """
+    def db_for_read(self, model, **hints):
+        """
+        Attempts to read user models go to users_db.
+        """
+        if model._meta.app_label == 'eotrts_student':
+            return 'eotrts_db'
+        elif model._meta.app_label == 'essential_english_words_1':
+            return 'essential_english_db'
+        return None
+
+    def db_for_write(self, model, **hints):
+        """
+        Attempts to write user models go to users_db.
+        """
+        if model._meta.app_label == 'eotrts_student':
+            return 'eotrts_db'
+        elif model._meta.app_label == 'essential_english_words_1':
+            return 'essential_english_db'
+        return None
+
+    def allow_relation(self, obj1, obj2, **hints):
+        """
+        Allow relations if a model in the user app is involved.
+        """
+        if obj1._meta.app_label == 'eotrts_student' or \
+           obj2._meta.app_label == 'eotrts_student':
+           return True
+        return None
+
+    def allow_migrate(self, db, app_label, model_name=None, **hints):
+        """
+        Make sure the auth app only appears in the 'users_db'
+        database.
+        """
+        if app_label == 'eotrts_student':
+            return db == 'eotrts_db'
+        return None
+
+
 class ConversationRecord(models.Model):
     crid = models.AutoField(primary_key=True)
     stu = models.ForeignKey('StudentData', models.DO_NOTHING)
@@ -18,6 +62,7 @@ class ConversationRecord(models.Model):
     datetime = models.DateTimeField()
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'conversation_record'
         unique_together = (('crid', 'stu', 'datetime'),)
@@ -35,6 +80,7 @@ class CourseInformation(models.Model):
     course_endhour = models.IntegerField(blank=True, null=True)
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'course_information'
         unique_together = (('cid', 'course_id', 'course_name', 'course_teacher'),)
@@ -46,6 +92,7 @@ class CourseProgress(models.Model):
     current_course = models.IntegerField(blank=True, null=True)
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'course_progress'
         unique_together = (('cpid', 'sid'),)
@@ -57,6 +104,7 @@ class PracticeCourses(models.Model):
     course = models.ForeignKey(CourseInformation, models.DO_NOTHING)
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'practice_courses'
         unique_together = (('pid', 'stu', 'course'),)
@@ -70,6 +118,7 @@ class RollCall(models.Model):
     datetime = models.DateField()
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'roll_call'
         unique_together = (('id', 'stu', 'stu_name', 'course_id'),)
@@ -87,6 +136,7 @@ class StuReadingAnswer(models.Model):
     reading_time = models.DateTimeField()
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'stu_reading_answer'
         unique_together = (('sta_id', 'sid', 'unit', 'stu_read_ans', 'wer'),)
@@ -103,6 +153,7 @@ class StuReadingWer(models.Model):
     datetime = models.DateTimeField()
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'stu_reading_wer'
         unique_together = (('srw_id', 'sid', 'datetime'),)
@@ -116,6 +167,7 @@ class StudentData(models.Model):
     class_name = models.CharField(max_length=40)
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'student_data'
         unique_together = (('stu_id', 'student_id'),)
@@ -128,6 +180,88 @@ class TeacherData(models.Model):
     teacher_class = models.CharField(max_length=45, blank=True, null=True)
 
     class Meta:
+        app_label = 'eotrts_student'
         managed = False
         db_table = 'teacher_data'
         unique_together = (('tid', 'teacher_id', 'teacher_name'),)
+
+
+class ReadingContent(models.Model):
+    rid = models.AutoField(primary_key=True)
+    unit = models.IntegerField()
+    content = models.TextField(blank=True, null=True)
+    reading_content = models.TextField(blank=True, null=True)
+    avg_confidence = models.FloatField(blank=True, null=True)
+    wer = models.FloatField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        app_label = 'essential_english_words_1'
+        db_table = 'reading_content'
+        unique_together = (('rid', 'unit'),)
+
+
+class Unit(models.Model):
+    unit_id = models.AutoField(primary_key=True)
+    unit = models.IntegerField()
+    title = models.CharField(max_length=45)
+
+    class Meta:
+        app_label = 'essential_english_words_1'
+        managed = False
+        db_table = 'unit'
+        unique_together = (('unit_id', 'unit', 'title'),)
+
+
+class UnitAnswer(models.Model):
+    an_id = models.AutoField(primary_key=True)
+    unit = models.IntegerField()
+    q_order = models.ForeignKey('UnitQuiz', models.DO_NOTHING, db_column='q_order')
+    answer = models.CharField(max_length=2, blank=True, null=True)
+    content = models.CharField(max_length=100)
+
+    class Meta:
+        app_label = 'essential_english_words_1'
+        managed = False
+        db_table = 'unit_answer'
+        unique_together = (('an_id', 'unit', 'content'),)
+
+
+class UnitQuiz(models.Model):
+    qid = models.AutoField(primary_key=True)
+    unit = models.ForeignKey(Unit, models.DO_NOTHING, db_column='unit')
+    order = models.IntegerField()
+    answer = models.CharField(max_length=2)
+    quiz = models.CharField(max_length=100)
+
+    class Meta:
+        app_label = 'essential_english_words_1'
+        managed = False
+        db_table = 'unit_quiz'
+        unique_together = (('qid', 'unit'),)
+
+
+class Words(models.Model):
+    wid = models.AutoField(primary_key=True)
+    unit = models.IntegerField()
+    word = models.CharField(max_length=45)
+    word_part = models.CharField(max_length=20)
+    english_definition = models.CharField(max_length=145)
+
+    class Meta:
+        app_label = 'essential_english_words_1'
+        managed = False
+        db_table = 'words'
+        unique_together = (('wid', 'word', 'word_part'),)
+
+
+def user_directory_path(instance, filename):
+    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
+    return '{0}/{1}'.format(filename[:8], filename)
+
+
+class File(models.Model):
+    file = models.FileField(upload_to=user_directory_path, blank=False, null=False)
+
+    def __str__(self):
+        return self.file.name

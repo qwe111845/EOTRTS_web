@@ -74,7 +74,9 @@ WSGI_APPLICATION = 'EOTRTS_web.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-
+DATABASE_ROUTERS = ['EOTRTS.models.EOTRTSRouter']
+DATABASE_APPS_MAPPING = {'essential_english_words_1': 'essential_english_db',
+                         'eotrts_student':'eotrts_db'}
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -84,7 +86,15 @@ DATABASES = {
         'HOST': '140.134.26.200',
         'PORT': '3306',
     },
-    'essential_english': {
+    'eotrts_db': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'eotrts_student',
+        'USER': 'user',
+        'PASSWORD': '1234',
+        'HOST': '140.134.26.200',
+        'PORT': '3306',
+    },
+    'essential_english_db': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'essential_english_words_1',
         'USER': 'user',
